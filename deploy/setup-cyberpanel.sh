@@ -22,7 +22,7 @@ for candidate in "$(command -v php || true)" /usr/local/lsws/lsphp{84,83,82}/bin
 done
 [[ -n "$PHP_BIN" ]] || { echo 'PHP 8.2+ CLI not found.' >&2; exit 1; }
 PHP_DIR=$(dirname "$PHP_BIN")
-run_site() { runuser -u "$SITE_USER" -- env HOME="$SITE_BASE" PATH="$PHP_DIR:$PATH" "$@"; }
+run_site() { ( cd "$SITE_BASE" && runuser -u "$SITE_USER" -- env HOME="$SITE_BASE" PATH="$PHP_DIR:$PATH" "$@" ); }
 DB_NAME=multitools_db
 DB_USER=multitools_app
 if mariadb -NBe "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='$DB_NAME'" | grep -Fxq "$DB_NAME"; then

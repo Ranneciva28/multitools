@@ -14,7 +14,7 @@ SITE_USER=$(stat -c '%U' "$APP")
 PHP_BIN=$(systemctl show threads-queue.service -p ExecStart --value | sed -n 's/.*path=\([^ ;]*\).*/\1/p')
 [[ -x "$PHP_BIN" ]] || PHP_BIN=$(command -v php)
 PHP_DIR=$(dirname "$PHP_BIN")
-run_site() { runuser -u "$SITE_USER" -- env HOME="$SITE_BASE" PATH="$PHP_DIR:$PATH" "$@"; }
+run_site() { ( cd "$SITE_BASE" && runuser -u "$SITE_USER" -- env HOME="$SITE_BASE" PATH="$PHP_DIR:$PATH" "$@" ); }
 run_site git -C "$REPO" fetch origin main
 run_site git -C "$REPO" merge --ff-only origin/main
 run_site cp -a "$REPO/overlay/." "$APP/"
