@@ -6,6 +6,7 @@ After=threads-desktop.service
 Type=simple
 User=THREADS_USER
 Environment=XAUTHORITY=/etc/threads-tools/Xauthority
+Environment=UNIXPW_DISABLE_SSL=1
 ExecStart=/usr/bin/x11vnc -display :1 -auth /etc/threads-tools/Xauthority -localhost -unixpw_cmd /usr/local/libexec/threads-vnc-auth -rfbport 5901 -forever -shared -noxdamage
 Restart=on-failure
 RestartSec=3
