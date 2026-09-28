@@ -39,3 +39,9 @@ The order website must verify payment server side before emitting this request; 
 - This implementation accepts JPG/PNG/WebP images. Video, drag reorder, bulk caption variants, per-account preview cards, automatic community scheduler, customer submission threads, masking of payment screenshots, and detailed health UI are **not implemented**. Native media multi-select follows the library order.
 - Worker screenshots are private files at `THREADS_PROFILE_ROOT/error-*.png` and their paths appear in activity details, visible only after admin login. Keep this directory outside the web root; use SSH to inspect.
 - An existing Laravel app needs a migration and route merge; applying the overlay wholesale to it may overwrite its auth or routes.
+
+## CyberPanel deployment for tools.avicennarabama.com
+
+The scripts `deploy/setup-cyberpanel.sh` and `deploy/update-cyberpanel.sh` install and update a dedicated CyberPanel website. They require the **actual** subdomain `public_html` path, root privileges for MariaDB/systemd, and PHP 8.2+, Composer, Node.js, MariaDB and Chromium system libraries installed. They back up the existing webroot, use a new dedicated database, and do not configure SSL, Cloudflare, Telegram credentials or private VNC. Inspect the script before running and verify the domain's origin certificate in CyberPanel.
+
+Run setup once from a clone of this repository with `sudo bash deploy/setup-cyberpanel.sh /home/<site>/public_html`. Child domains can have a nested path such as `/home/<parent>/public_html/tools.avicennarabama.com`; use the path shown by CyberPanel for this subdomain. Subsequent updates use `sudo bash deploy/update-cyberpanel.sh <same path>`. Nothing polls Git or redeploys automatically.
