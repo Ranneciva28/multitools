@@ -1,0 +1,12 @@
+[Unit]
+Description=Threads Tools Laravel Queue
+After=network.target mariadb.service
+[Service]
+Type=simple
+User=THREADS_USER
+WorkingDirectory=/var/www/threads-tools
+ExecStart=/usr/bin/php artisan queue:work database --sleep=3 --tries=2 --timeout=150
+Restart=on-failure
+RestartSec=10
+[Install]
+WantedBy=multi-user.target

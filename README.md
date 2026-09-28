@@ -13,8 +13,8 @@ The website **must** send the webhook only after its server verifies a genuine p
 
 ## Install on a new host
 
-1. Install PHP 8.2+ with extensions required by Laravel, Composer, Node.js, MariaDB, and Chromium libraries. Create a dedicated unprivileged service user. Extract this ZIP on the VPS.
-2. Run `./install.sh /var/www/threads-tools` from the extracted package. This downloads a fresh Laravel 12 skeleton and Playwright Chromium, then applies the overlay. It **refuses to overwrite** an existing target.
+1. Install PHP 8.2+ with extensions required by Laravel, Composer, Node.js, MariaDB, and Chromium libraries. Create a dedicated unprivileged service user. Clone this repository on the VPS.
+2. Run `./install.sh /var/www/threads-tools` from the cloned repository. This downloads a fresh Laravel 12 skeleton and Playwright Chromium, then applies the overlay. It **refuses to overwrite** an existing target.
 3. Copy the values in `threads.env.example` into `/var/www/threads-tools/.env`. Configure the DB, APP_URL, APP_KEY (`php artisan key:generate`), and generate *distinct* secrets with `openssl rand -hex 32`. Do not commit `.env`.
 4. Create MariaDB database and user. Run `php artisan migrate --force` and `php artisan threads:make-admin`. Point OpenLiteSpeed's document root to `/var/www/threads-tools/public`, enforce HTTPS, deny direct access to `.env` and `storage`.
 5. Create `/etc/threads-tools/worker.env` from `deploy/worker.env.example` with mode `0600`. The worker secret must match Laravel's `.env`. Set `THREADS_PROFILE_ROOT` to a directory accessible only by the service user. Ensure worker and PHP share read access to `storage/app/private/threads-media`.
@@ -34,7 +34,7 @@ The order website must verify payment server side before emitting this request; 
 
 ## Operational notes and current limits
 
-- **Not deployed or live tested here.** The build environment had no PHP, Composer, repo, server access, or account credentials. Laravel migrations, real browser selectors, and Telegram delivery still need to be tested on the target VPS.
+- **Not deployed or live tested here.** The build environment had no PHP, Composer, server access, or account credentials. Source was uploaded to the `multitools` GitHub repository. Laravel migrations, real browser selectors, and Telegram delivery still need to be tested on the target VPS.
 - Threads UI is outside the app's control. Login detection and composer selectors in `worker/server.mjs` must be checked against the actual current site. If publish confirmation is uncertain, worker returns an error; inspect the account before retry to avoid duplicate posts.
 - This implementation accepts JPG/PNG/WebP images. Video, drag reorder, bulk caption variants, per-account preview cards, automatic community scheduler, customer submission threads, masking of payment screenshots, and detailed health UI are **not implemented**. Native media multi-select follows the library order.
 - Worker screenshots are private files at `THREADS_PROFILE_ROOT/error-*.png` and their paths appear in activity details, visible only after admin login. Keep this directory outside the web root; use SSH to inspect.

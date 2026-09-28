@@ -1,0 +1,16 @@
+[Unit]
+Description=Threads Tools Playwright Worker
+After=network.target
+[Service]
+Type=simple
+User=THREADS_USER
+WorkingDirectory=/var/www/threads-tools/worker
+EnvironmentFile=/etc/threads-tools/worker.env
+ExecStart=/usr/bin/node server.mjs
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/www/threads-tools/storage
+[Install]
+WantedBy=multi-user.target

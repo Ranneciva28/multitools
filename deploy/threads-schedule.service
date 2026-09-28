@@ -1,0 +1,12 @@
+[Unit]
+Description=Threads Tools Scheduler (single persistent process)
+After=network.target
+[Service]
+Type=simple
+User=THREADS_USER
+WorkingDirectory=/var/www/threads-tools
+ExecStart=/usr/bin/php artisan schedule:work
+Restart=on-failure
+RestartSec=10
+[Install]
+WantedBy=multi-user.target

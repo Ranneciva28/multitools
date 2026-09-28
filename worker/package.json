@@ -1,0 +1,1 @@
+{"name":"threads-tools-worker","private":true,"type":"module","scripts":{"start":"node server.mjs","test":"node --test"},"dependencies":{"playwright":"^1.58.0"}}
