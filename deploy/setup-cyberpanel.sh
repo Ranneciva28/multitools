@@ -21,10 +21,10 @@ if [[ -e "$APP" ]]; then
 fi
 for command in git composer node npm mariadb python3 systemctl runuser openssl curl; do command -v "$command" >/dev/null || { echo "Missing command: $command" >&2; exit 1; }; done
 PHP_BIN=''
-for candidate in "$(command -v php || true)" /usr/local/lsws/lsphp{84,83,82}/bin/php; do
-  if [[ -x "$candidate" ]] && "$candidate" -r 'exit(PHP_VERSION_ID >= 80200 ? 0 : 1);'; then PHP_BIN="$candidate"; break; fi
+for candidate in "$(command -v php || true)" /usr/local/lsws/lsphp84/bin/php; do
+  if [[ -x "$candidate" ]] && "$candidate" -r 'exit(PHP_VERSION_ID >= 80401 ? 0 : 1);'; then PHP_BIN="$candidate"; break; fi
 done
-[[ -n "$PHP_BIN" ]] || { echo 'PHP 8.2+ CLI not found.' >&2; exit 1; }
+[[ -n "$PHP_BIN" ]] || { echo 'PHP 8.4.1+ CLI not found.' >&2; exit 1; }
 PHP_DIR=$(dirname "$PHP_BIN")
 run_site() { ( cd "$SITE_BASE" && runuser -u "$SITE_USER" -- env HOME="$SITE_BASE" PATH="$PHP_DIR:$PATH" "$@" ); }
 DB_NAME=multitools_db

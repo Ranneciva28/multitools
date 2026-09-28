@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# On a host with PHP 8.2+, Composer and Node. Creates a NEW directory only.
+# On a host with PHP 8.4.1+, Composer and Node. Creates a NEW directory only.
 TARGET="${1:-threads-tools-app}"
 if [ -e "$TARGET" ]; then echo "Target already exists: $TARGET" >&2; exit 1; fi
 command -v composer >/dev/null || { echo 'Composer required' >&2; exit 1; }
 command -v node >/dev/null || { echo 'Node required' >&2; exit 1; }
 PHP_BIN="${THREADS_PHP_BIN:-$(command -v php)}"
 [[ -n "$PHP_BIN" && -x "$PHP_BIN" ]] || { echo 'PHP CLI required' >&2; exit 1; }
+"$PHP_BIN" -r 'exit(PHP_VERSION_ID >= 80401 ? 0 : 1);' || { echo "PHP 8.4.1+ CLI required for current dependencies" >&2; exit 1; }
 "$PHP_BIN" "$(command -v composer)" create-project laravel/laravel "$TARGET" '^12.0'
 cp -R "$(dirname "$0")/overlay/." "$TARGET/"
 mkdir -p "$TARGET/worker"

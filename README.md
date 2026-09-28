@@ -1,6 +1,6 @@
 # Threads Tools — installation package
 
-This package installs into **a new Laravel 12 application**. It is designed for a Linux VPS with PHP 8.2+, Composer, Node.js, MariaDB, a private desktop session (Xvfb/VNC), and a Telegram bot. The package contains no credentials, browser sessions, or customer payment records. It does not replace an existing project: inspect and merge the `overlay/` files if an existing Laravel app is provided later.
+This package installs into **a new Laravel 12 application**. It is designed for a Linux VPS with PHP 8.4.1+, Composer, Node.js, MariaDB, a private desktop session (Xvfb/VNC), and a Telegram bot. The package contains no credentials, browser sessions, or customer payment records. It does not replace an existing project: inspect and merge the `overlay/` files if an existing Laravel app is provided later.
 
 ## What works in source
 
@@ -13,7 +13,7 @@ The website **must** send the webhook only after its server verifies a genuine p
 
 ## Install on a new host
 
-1. Install PHP 8.2+ with extensions required by Laravel, Composer, Node.js, MariaDB, and Chromium libraries. Create a dedicated unprivileged service user. Clone this repository on the VPS.
+1. Install PHP 8.4.1+ with extensions required by Laravel, Composer, Node.js, MariaDB, and Chromium libraries. Create a dedicated unprivileged service user. Clone this repository on the VPS.
 2. Run `./install.sh /var/www/threads-tools` from the cloned repository. This downloads a fresh Laravel 12 skeleton and Playwright Chromium, then applies the overlay. It **refuses to overwrite** an existing target.
 3. Copy the values in `threads.env.example` into `/var/www/threads-tools/.env`. Configure the DB, APP_URL, APP_KEY (`php artisan key:generate`), and generate *distinct* secrets with `openssl rand -hex 32`. Do not commit `.env`.
 4. Create MariaDB database and user. Run `php artisan migrate --force` and `php artisan threads:make-admin`. Point OpenLiteSpeed's document root to `/var/www/threads-tools/public`, enforce HTTPS, deny direct access to `.env` and `storage`.
@@ -42,12 +42,14 @@ The order website must verify payment server side before emitting this request; 
 
 ## CyberPanel deployment for tools.avicennarabama.com
 
-The scripts `deploy/setup-cyberpanel.sh` and `deploy/update-cyberpanel.sh` install and update a dedicated CyberPanel website. They require the **actual** subdomain `public_html` path, root privileges for MariaDB/systemd, and PHP 8.2+, Composer, Node.js, MariaDB and Chromium system libraries installed. They back up the existing webroot, use a new dedicated database, and do not configure SSL, Cloudflare, Telegram credentials or private VNC. Inspect the script before running and verify the domain's origin certificate in CyberPanel.
+The scripts `deploy/setup-cyberpanel.sh` and `deploy/update-cyberpanel.sh` install and update a dedicated CyberPanel website. They require the **actual** subdomain `public_html` path, root privileges for MariaDB/systemd, and PHP 8.4.1+, Composer, Node.js, MariaDB and Chromium system libraries installed. They back up the existing webroot, use a new dedicated database, and do not configure SSL, Cloudflare, Telegram credentials or private VNC. Inspect the script before running and verify the domain's origin certificate in CyberPanel.
 
 Run setup once from a clone of this repository with `sudo bash deploy/setup-cyberpanel.sh /home/<site>/public_html`. Child domains can have a nested path such as `/home/<parent>/public_html/tools.avicennarabama.com`; use the path shown by CyberPanel for this subdomain. Subsequent updates use `sudo bash deploy/update-cyberpanel.sh <same path>`. Nothing polls Git or redeploys automatically.
 
-If setup stopped before the database/webroot stage, the setup script can reuse its own `multitools-src` clone when `multitools-app` does not exist. It verifies the Git origin and fast forwards to `main`. Composer is invoked explicitly through the selected PHP 8.2+ CLI because CyberPanel may expose an older `/usr/bin/php` alongside newer LiteSpeed PHP binaries. If `multitools-app` exists after a failed attempt, inspect it before retrying; the script refuses to overwrite it.
+If setup stopped before the database/webroot stage, the setup script can reuse its own `multitools-src` clone when `multitools-app` does not exist. It verifies the Git origin and fast forwards to `main`. Composer is invoked explicitly through the selected PHP 8.4.1+ CLI because CyberPanel may expose an older `/usr/bin/php` alongside newer LiteSpeed PHP binaries. If `multitools-app` exists after a failed attempt, inspect it before retrying; the script refuses to overwrite it.
 
 CyberPanel's site user must launch Composer from an accessible working directory. The deployment scripts change into the site home before `runuser`; running from a root-only directory such as `/root` can make Symfony Process report `Unable to launch a new process` even while a direct `proc_open` test succeeds.
 
 If migration of `telegram_transaction_feed` failed because MariaDB rejected the generated index name, update the repository and rerun `deploy/setup-cyberpanel.sh`. The migration uses an explicit short index name and checks already created tables; the setup script verifies the existing app/database, preserves `.env` and APP_KEY, and continues without dropping tables.
+
+The production website PHP version in CyberPanel must also be 8.4.1+; the CLI version alone does not determine the web handler. For this subdomain, use Websites → Modify Website → tools.avicennarabama.com → PHP 8.4.
