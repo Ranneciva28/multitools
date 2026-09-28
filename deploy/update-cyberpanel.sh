@@ -4,7 +4,8 @@ set -Eeuo pipefail
 DOMAIN=tools.avicennarabama.com
 WEBROOT="${1:-}"
 [[ $EUID -eq 0 && -n "$WEBROOT" ]] || { echo 'Usage: sudo bash deploy/update-cyberpanel.sh /absolute/path/to/public_html' >&2; exit 1; }
-WEBROOT=$(realpath "$WEBROOT")
+# Resolve the parent only: public_html itself is a symlink after setup.
+WEBROOT="$(realpath "$(dirname "$WEBROOT")")/$(basename "$WEBROOT")"
 [[ "$WEBROOT" == /home/*/public_html || "$WEBROOT" == /home/*/public_html/* ]] || exit 1
 SITE_BASE="/home/$(printf '%s' "$WEBROOT" | cut -d/ -f3)"
 REPO="$SITE_BASE/multitools-src"
