@@ -103,6 +103,8 @@ PYENV
   run_site cp -a "$REPO/overlay/." "$APP/"
   run_site cp -a "$REPO/worker/." "$APP/worker/"
 fi
+# Browser downloads alone do not install the Linux libraries Chromium needs.
+"$APP/worker/node_modules/.bin/playwright" install-deps chromium
 run_site "$PHP_BIN" "$APP/artisan" migrate --force
 run_site "$PHP_BIN" "$APP/artisan" optimize
 run_site "$PHP_BIN" "$APP/artisan" route:list --path=login >/dev/null
