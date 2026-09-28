@@ -6,12 +6,14 @@ Type=simple
 User=THREADS_USER
 WorkingDirectory=/var/www/threads-tools/worker
 EnvironmentFile=/etc/threads-tools/worker.env
-Environment=TMPDIR=/var/www/threads-tools/storage/playwright-tmp
+RuntimeDirectory=threads-tools
+RuntimeDirectoryMode=0700
+Environment=TMPDIR=/run/threads-tools
 ExecStart=/usr/bin/node server.mjs
 Restart=on-failure
 RestartSec=10
 NoNewPrivileges=true
 ProtectSystem=strict
-ReadWritePaths=/var/www/threads-tools/storage
+ReadWritePaths=/var/www/threads-tools/storage /run/threads-tools
 [Install]
 WantedBy=multi-user.target

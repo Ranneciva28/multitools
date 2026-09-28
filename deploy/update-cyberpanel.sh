@@ -26,7 +26,6 @@ run_site bash -c 'cd "$1" && npx playwright install chromium' _ "$APP/worker"
 "$APP/worker/node_modules/.bin/playwright" install-deps chromium
 run_site "$PHP_BIN" "$APP/artisan" migrate --force
 run_site "$PHP_BIN" "$APP/artisan" optimize
-install -d -m 0700 -o "$SITE_USER" -g "$(id -gn "$SITE_USER")" "$APP/storage/playwright-tmp"
 NODE_BIN=$(command -v node)
 sed -e "s|THREADS_USER|$SITE_USER|g" -e "s|/var/www/threads-tools|$APP|g" \
     -e "s|/usr/bin/node|$NODE_BIN|g" \
