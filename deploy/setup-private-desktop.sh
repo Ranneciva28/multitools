@@ -25,14 +25,12 @@ if [[ ! -f "$AUTH" ]]; then
   chown "$SITE_USER:$SITE_GROUP" "$AUTH"
 fi
 if [[ ! -f "$VNC_PASSFILE" ]]; then
-  [[ -t 0 ]] || { echo 'Interactive SSH terminal required for initial VNC password.' >&2; exit 1; }
-  read -r -s -p 'Choose 8-character VNC password (letters/numbers): ' VNC_PASSWORD
-  echo
-  [[ "$VNC_PASSWORD" =~ ^[A-Za-z0-9]{8}$ ]] || { echo 'Password must be exactly 8 letters/numbers.' >&2; exit 1; }
+  VNC_PASSWORD=$(python3 -c 'import secrets, string; print("".join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8)))')
   x11vnc -storepasswd "$VNC_PASSWORD" "$VNC_PASSFILE" >/dev/null 2>&1
-  unset VNC_PASSWORD
   chown "$SITE_USER:$SITE_GROUP" "$VNC_PASSFILE"
   chmod 0600 "$VNC_PASSFILE"
+  printf 'Save this VNC password now: %s\n' "$VNC_PASSWORD"
+  unset VNC_PASSWORD
 fi
 cat > /etc/systemd/system/threads-desktop.service <<UNIT
 [Unit]
