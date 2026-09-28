@@ -1,0 +1,13 @@
+[Unit]
+Description=Loopback VNC for Threads desktop
+Requires=threads-desktop.service
+After=threads-desktop.service
+[Service]
+Type=simple
+User=THREADS_USER
+Environment=XAUTHORITY=/etc/threads-tools/Xauthority
+ExecStart=/usr/bin/x11vnc -display :1 -auth /etc/threads-tools/Xauthority -localhost -unixpw_cmd /usr/local/libexec/threads-vnc-auth -rfbport 5901 -forever -shared -noxdamage
+Restart=on-failure
+RestartSec=3
+[Install]
+WantedBy=multi-user.target

@@ -3,6 +3,7 @@ set -Eeuo pipefail
 # A private X11 desktop and noVNC endpoint for manual Threads sign-in.
 # noVNC and VNC bind only to loopback; access noVNC through an SSH tunnel.
 APP=/home/tools.avicennarabama.com/multitools-app
+REPO=/home/tools.avicennarabama.com/multitools-src
 [[ $EUID -eq 0 && -f "$APP/artisan" ]] || { echo 'Run as root on the deployed tools VPS.' >&2; exit 1; }
 SITE_USER=$(stat -c '%U' "$APP")
 SITE_GROUP=$(id -gn "$SITE_USER")
@@ -17,21 +18,14 @@ apt-get install -y --no-install-recommends xvfb xauth x11vnc novnc websockify
 [[ -f /usr/share/novnc/vnc.html ]] || { echo 'noVNC web assets missing.' >&2; exit 1; }
 install -d -m 0755 /etc/threads-tools
 AUTH=/etc/threads-tools/Xauthority
-VNC_PASSFILE=/etc/threads-tools/vnc.pass
 if [[ ! -f "$AUTH" ]]; then
   install -m 0600 -o "$SITE_USER" -g "$SITE_GROUP" /dev/null "$AUTH"
   # xauth creates lock files beside Xauthority, so add the cookie as root.
   xauth -f "$AUTH" add :1 MIT-MAGIC-COOKIE-1 "$(openssl rand -hex 16)"
   chown "$SITE_USER:$SITE_GROUP" "$AUTH"
 fi
-if [[ ! -f "$VNC_PASSFILE" ]]; then
-  VNC_PASSWORD=$(python3 -c 'import secrets, string; print("".join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8)))')
-  x11vnc -storepasswd "$VNC_PASSWORD" "$VNC_PASSFILE" >/dev/null 2>&1
-  chown "$SITE_USER:$SITE_GROUP" "$VNC_PASSFILE"
-  chmod 0600 "$VNC_PASSFILE"
-  printf 'Save this VNC password now: %s\n' "$VNC_PASSWORD"
-  unset VNC_PASSWORD
-fi
+install -d -m 0755 /usr/local/libexec
+install -m 0755 "$REPO/deploy/vnc-auth.py" /usr/local/libexec/threads-vnc-auth
 cat > /etc/systemd/system/threads-desktop.service <<UNIT
 [Unit]
 Description=Private X11 desktop for Threads login
@@ -46,21 +40,10 @@ RestartSec=3
 [Install]
 WantedBy=multi-user.target
 UNIT
-cat > /etc/systemd/system/threads-vnc.service <<UNIT
-[Unit]
-Description=Loopback VNC for Threads desktop
-Requires=threads-desktop.service
-After=threads-desktop.service
-[Service]
-Type=simple
-User=$SITE_USER
-Environment=XAUTHORITY=$AUTH
-ExecStart=/usr/bin/x11vnc -display :1 -auth $AUTH -localhost -rfbauth $VNC_PASSFILE -rfbport 5901 -forever -shared -noxdamage
-Restart=on-failure
-RestartSec=3
-[Install]
-WantedBy=multi-user.target
-UNIT
+sed "s|THREADS_USER|$SITE_USER|g" "$REPO/deploy/threads-vnc.service" > /etc/systemd/system/threads-vnc.service
+if [[ ! -f /etc/threads-tools/vnc-auth.json ]]; then
+  bash "$REPO/deploy/reset-vnc-password.sh"
+fi
 cat > /etc/systemd/system/threads-novnc.service <<'UNIT'
 [Unit]
 Description=Loopback noVNC for Threads desktop
@@ -92,4 +75,4 @@ done
 [[ -S /tmp/.X11-unix/X1 ]] || { echo 'Xvfb failed. Check journalctl -u threads-desktop -n 60.' >&2; exit 1; }
 curl --fail --silent --output /dev/null http://127.0.0.1:6080/vnc.html
 echo 'Private desktop ready. Tunnel from your Windows PC: ssh -N -L 6080:127.0.0.1:6080 root@43.156.103.87'
-echo 'Then open http://127.0.0.1:6080/vnc.html in your PC browser and enter the VNC password.'
+echo 'Then open http://127.0.0.1:6080/vnc.html; click Connect and log in as owner with your VNC password.'
