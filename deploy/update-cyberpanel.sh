@@ -32,5 +32,14 @@ sed -e "s|THREADS_USER|$SITE_USER|g" -e "s|/var/www/threads-tools|$APP|g" \
     "$REPO/deploy/threads-worker.service" > /etc/systemd/system/threads-worker.service
 systemctl daemon-reload
 systemctl restart threads-worker.service threads-queue.service threads-schedule.service
-curl --fail --silent http://127.0.0.1:3487/health >/dev/null
+WORKER_READY=0
+for attempt in {1..30}; do
+  if curl --fail --silent http://127.0.0.1:3487/health >/dev/null; then WORKER_READY=1; break; fi
+  sleep 1
+done
+if [[ "$WORKER_READY" != 1 ]]; then
+  journalctl -u threads-worker.service -n 50 --no-pager >&2
+  echo 'Threads worker did not become healthy.' >&2
+  exit 1
+fi
 echo "Updated $DOMAIN from $(run_site git -C "$REPO" rev-parse --short HEAD)"

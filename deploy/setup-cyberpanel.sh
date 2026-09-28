@@ -128,7 +128,16 @@ for unit in threads-worker threads-queue threads-schedule; do
 done
 systemctl daemon-reload
 systemctl enable --now threads-worker.service threads-queue.service threads-schedule.service
-curl --fail --silent http://127.0.0.1:3487/health >/dev/null
+WORKER_READY=0
+for attempt in {1..30}; do
+  if curl --fail --silent http://127.0.0.1:3487/health >/dev/null; then WORKER_READY=1; break; fi
+  sleep 1
+done
+if [[ "$WORKER_READY" != 1 ]]; then
+  journalctl -u threads-worker.service -n 50 --no-pager >&2
+  echo 'Threads worker did not become healthy.' >&2
+  exit 1
+fi
 # Only switch the webroot after CLI and worker health pass. Preserve old content.
 BACKUP="${WEBROOT}.backup.$(date +%Y%m%d-%H%M%S)"
 mv "$WEBROOT" "$BACKUP"
