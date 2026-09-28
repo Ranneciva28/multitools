@@ -14,7 +14,7 @@ SITE_USER=$(stat -c '%U' "$WEBROOT")
 [[ -d "$SITE_BASE" && ! -L "$WEBROOT" ]] || { echo 'Webroot already linked or site base missing; stop.' >&2; exit 1; }
 APP="$SITE_BASE/multitools-app"
 REPO="$SITE_BASE/multitools-src"
-[[ ! -e "$APP" && ! -e "$REPO" ]] || { echo "Existing app/repository found. Use deploy/update-cyberpanel.sh if already installed." >&2; exit 1; }
+[[ ! -e "$APP" ]] || { echo "App directory already exists: $APP. Stop to protect it." >&2; exit 1; }
 for command in git composer node npm mariadb python3 systemctl runuser openssl curl; do command -v "$command" >/dev/null || { echo "Missing command: $command" >&2; exit 1; }; done
 PHP_BIN=''
 for candidate in "$(command -v php || true)" /usr/local/lsws/lsphp{84,83,82}/bin/php; do
@@ -32,8 +32,15 @@ if mariadb -NBe "SELECT User FROM mysql.user WHERE User='$DB_USER'" | grep -Fxq 
   echo "DB user $DB_USER already exists. Refusing to change it." >&2; exit 1
 fi
 # Clone into a private location outside any public_html.
-run_site git clone --depth 1 "$REPO_URL" "$REPO"
-run_site env PATH="$PHP_DIR:$PATH" bash "$REPO/install.sh" "$APP"
+if [[ -e "$REPO" ]]; then
+  [[ -d "$REPO/.git" ]] || { echo "Existing non-Git path: $REPO" >&2; exit 1; }
+  [[ "$(run_site git -C "$REPO" remote get-url origin)" == "$REPO_URL" ]] || { echo 'Unexpected Git origin; stop.' >&2; exit 1; }
+  run_site git -C "$REPO" fetch origin main
+  run_site git -C "$REPO" merge --ff-only origin/main
+else
+  run_site git clone --depth 1 "$REPO_URL" "$REPO"
+fi
+run_site env THREADS_PHP_BIN="$PHP_BIN" bash "$REPO/install.sh" "$APP"
 DB_PASS=$(openssl rand -hex 24)
 WORKER_SECRET=$(openssl rand -hex 32)
 ORDER_SECRET=$(openssl rand -hex 32)

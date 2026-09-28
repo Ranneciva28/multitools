@@ -5,7 +5,9 @@ TARGET="${1:-threads-tools-app}"
 if [ -e "$TARGET" ]; then echo "Target already exists: $TARGET" >&2; exit 1; fi
 command -v composer >/dev/null || { echo 'Composer required' >&2; exit 1; }
 command -v node >/dev/null || { echo 'Node required' >&2; exit 1; }
-composer create-project laravel/laravel "$TARGET" '^12.0'
+PHP_BIN="${THREADS_PHP_BIN:-$(command -v php)}"
+[[ -n "$PHP_BIN" && -x "$PHP_BIN" ]] || { echo 'PHP CLI required' >&2; exit 1; }
+"$PHP_BIN" "$(command -v composer)" create-project laravel/laravel "$TARGET" '^12.0'
 cp -R "$(dirname "$0")/overlay/." "$TARGET/"
 mkdir -p "$TARGET/worker"
 cp -R "$(dirname "$0")/worker/." "$TARGET/worker/"

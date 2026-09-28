@@ -19,7 +19,7 @@ run_site git -C "$REPO" fetch origin main
 run_site git -C "$REPO" merge --ff-only origin/main
 run_site cp -a "$REPO/overlay/." "$APP/"
 run_site cp -a "$REPO/worker/." "$APP/worker/"
-run_site composer install --working-dir="$APP" --no-dev --prefer-dist --no-interaction --optimize-autoloader
+run_site "$PHP_BIN" "$(command -v composer)" install --working-dir="$APP" --no-dev --prefer-dist --no-interaction --optimize-autoloader
 run_site npm --prefix "$APP/worker" install --omit=dev
 run_site bash -c 'cd "$1" && npx playwright install chromium' _ "$APP/worker"
 run_site "$PHP_BIN" "$APP/artisan" migrate --force
