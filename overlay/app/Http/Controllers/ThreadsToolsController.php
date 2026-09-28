@@ -47,6 +47,13 @@ class ThreadsToolsController extends Controller
         catch (\Throwable $e) { DB::table('threads_accounts')->where('id',$id)->update(['status'=>'ERROR','last_error'=>$e->getMessage()]); return back()->withErrors(['worker'=>$e->getMessage()]); }
         return back()->with('notice','Browser login dibuka di tampilan server. Login manual, lalu klik Check Session.');
     }
+    public function retryAccount(int $id) {
+        $a=DB::table('threads_accounts')->find($id); abort_unless($a,404);
+        try { $this->worker('/threads/open-login',['uuid'=>$a->uuid]); }
+        catch (\Throwable $e) { DB::table('threads_accounts')->where('id',$id)->update(['status'=>'ERROR','last_error'=>$e->getMessage(),'updated_at'=>now()]); return back()->withErrors(['worker'=>$e->getMessage()]); }
+        DB::table('threads_accounts')->where('id',$id)->update(['status'=>'LOGIN_REQUIRED','last_error'=>null,'updated_at'=>now()]);
+        return back()->with('notice','Browser login dibuka di tampilan server. Login manual, lalu klik Check Session.');
+    }
     public function checkAccount(int $id) {
         $a=DB::table('threads_accounts')->find($id); abort_unless($a,404);
         $result=$this->worker('/threads/check-session',['uuid'=>$a->uuid]);

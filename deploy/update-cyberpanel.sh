@@ -24,6 +24,12 @@ run_site npm --prefix "$APP/worker" install --omit=dev
 run_site bash -c 'cd "$1" && npx playwright install chromium' _ "$APP/worker"
 run_site "$PHP_BIN" "$APP/artisan" migrate --force
 run_site "$PHP_BIN" "$APP/artisan" optimize
+install -d -m 0700 -o "$SITE_USER" -g "$(id -gn "$SITE_USER")" "$APP/storage/playwright-tmp"
+NODE_BIN=$(command -v node)
+sed -e "s|THREADS_USER|$SITE_USER|g" -e "s|/var/www/threads-tools|$APP|g" \
+    -e "s|/usr/bin/node|$NODE_BIN|g" \
+    "$REPO/deploy/threads-worker.service" > /etc/systemd/system/threads-worker.service
+systemctl daemon-reload
 systemctl restart threads-worker.service threads-queue.service threads-schedule.service
 curl --fail --silent http://127.0.0.1:3487/health >/dev/null
 echo "Updated $DOMAIN from $(run_site git -C "$REPO" rev-parse --short HEAD)"

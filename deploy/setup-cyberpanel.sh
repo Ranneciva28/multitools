@@ -107,6 +107,7 @@ run_site "$PHP_BIN" "$APP/artisan" migrate --force
 run_site "$PHP_BIN" "$APP/artisan" optimize
 run_site "$PHP_BIN" "$APP/artisan" route:list --path=login >/dev/null
 # Service definitions live outside the public document root.
+install -d -m 0700 -o "$SITE_USER" -g "$(id -gn "$SITE_USER")" "$APP/storage/playwright-tmp"
 mkdir -p /etc/threads-tools
 WORKER_ENV=/etc/threads-tools/worker.env
 cat > "$WORKER_ENV" <<ENV

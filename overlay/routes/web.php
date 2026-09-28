@@ -9,6 +9,7 @@ Route::post('/logout',[C::class,'logout'])->middleware('auth');
 Route::middleware(['auth','throttle:60,1'])->group(function () {
     Route::get('/',[C::class,'index']);
     Route::post('/accounts',[C::class,'account']);
+    Route::post('/accounts/{id}/login',[C::class,'retryAccount']);
     Route::post('/accounts/{id}/check',[C::class,'checkAccount']);
     Route::post('/campaigns',[C::class,'campaign']);
     Route::post('/campaigns/{id}/duplicate',[C::class,'duplicate']);
