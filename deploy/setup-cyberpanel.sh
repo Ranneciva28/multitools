@@ -14,7 +14,11 @@ SITE_USER=$(stat -c '%U' "$WEBROOT")
 [[ -d "$SITE_BASE" && ! -L "$WEBROOT" ]] || { echo 'Webroot already linked or site base missing; stop.' >&2; exit 1; }
 APP="$SITE_BASE/multitools-app"
 REPO="$SITE_BASE/multitools-src"
-[[ ! -e "$APP" ]] || { echo "App directory already exists: $APP. Stop to protect it." >&2; exit 1; }
+RESUME=0
+if [[ -e "$APP" ]]; then
+  [[ -f "$APP/artisan" && -f "$APP/.env" && -d "$APP/vendor" ]] || { echo "Incomplete or unrelated app directory: $APP. Stop to protect it." >&2; exit 1; }
+  RESUME=1
+fi
 for command in git composer node npm mariadb python3 systemctl runuser openssl curl; do command -v "$command" >/dev/null || { echo "Missing command: $command" >&2; exit 1; }; done
 PHP_BIN=''
 for candidate in "$(command -v php || true)" /usr/local/lsws/lsphp{84,83,82}/bin/php; do
@@ -25,11 +29,13 @@ PHP_DIR=$(dirname "$PHP_BIN")
 run_site() { ( cd "$SITE_BASE" && runuser -u "$SITE_USER" -- env HOME="$SITE_BASE" PATH="$PHP_DIR:$PATH" "$@" ); }
 DB_NAME=multitools_db
 DB_USER=multitools_app
-if mariadb -NBe "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='$DB_NAME'" | grep -Fxq "$DB_NAME"; then
-  echo "Database $DB_NAME already exists. Refusing to change it." >&2; exit 1
-fi
-if mariadb -NBe "SELECT User FROM mysql.user WHERE User='$DB_USER'" | grep -Fxq "$DB_USER"; then
-  echo "DB user $DB_USER already exists. Refusing to change it." >&2; exit 1
+if [[ "$RESUME" == 0 ]]; then
+  if mariadb -NBe "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='$DB_NAME'" | grep -Fxq "$DB_NAME"; then
+    echo "Database $DB_NAME already exists. Refusing to change it." >&2; exit 1
+  fi
+  if mariadb -NBe "SELECT User FROM mysql.user WHERE User='$DB_USER'" | grep -Fxq "$DB_USER"; then
+    echo "DB user $DB_USER already exists. Refusing to change it." >&2; exit 1
+  fi
 fi
 # Clone into a private location outside any public_html.
 if [[ -e "$REPO" ]]; then
@@ -40,17 +46,18 @@ if [[ -e "$REPO" ]]; then
 else
   run_site git clone --depth 1 "$REPO_URL" "$REPO"
 fi
-run_site env THREADS_PHP_BIN="$PHP_BIN" bash "$REPO/install.sh" "$APP"
-DB_PASS=$(openssl rand -hex 24)
-WORKER_SECRET=$(openssl rand -hex 32)
-ORDER_SECRET=$(openssl rand -hex 32)
-mariadb <<SQL
+if [[ "$RESUME" == 0 ]]; then
+  run_site env THREADS_PHP_BIN="$PHP_BIN" bash "$REPO/install.sh" "$APP"
+  DB_PASS=$(openssl rand -hex 24)
+  WORKER_SECRET=$(openssl rand -hex 32)
+  ORDER_SECRET=$(openssl rand -hex 32)
+  mariadb <<SQL
 CREATE DATABASE \`$DB_NAME\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';
 GRANT ALL PRIVILEGES ON \`$DB_NAME\`.* TO '$DB_USER'@'localhost';
 SQL
-export APP DB_NAME DB_USER DB_PASS WORKER_SECRET ORDER_SECRET DOMAIN
-python3 - <<'PY'
+  export APP DB_NAME DB_USER DB_PASS WORKER_SECRET ORDER_SECRET DOMAIN
+  python3 - <<'PY'
 from pathlib import Path
 import os
 p=Path(os.environ['APP'])/'.env'
@@ -73,7 +80,29 @@ output.extend(k+'='+v for k,v in values.items())
 p.write_text('\n'.join(output)+'\n')
 p.chmod(0o600)
 PY
-run_site "$PHP_BIN" "$APP/artisan" key:generate --force
+  run_site "$PHP_BIN" "$APP/artisan" key:generate --force
+else
+  # The initial run already created credentials. Never rotate them during resume.
+  ENV_DB=$(python3 - "$APP/.env" <<'PYENV'
+import sys
+for line in open(sys.argv[1]):
+    if line.startswith('DB_DATABASE='):
+        print(line.split('=', 1)[1].strip()); break
+PYENV
+)
+  [[ "$ENV_DB" == "$DB_NAME" ]] || { echo 'Existing .env points to a different database.' >&2; exit 1; }
+  mariadb -NBe "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='$DB_NAME'" | grep -Fxq "$DB_NAME" || { echo 'Expected database is missing.' >&2; exit 1; }
+  WORKER_SECRET=$(python3 - "$APP/.env" <<'PYENV'
+import sys
+for line in open(sys.argv[1]):
+    if line.startswith('THREADS_WORKER_SECRET='):
+        print(line.split('=', 1)[1].strip()); break
+PYENV
+)
+  [[ "$WORKER_SECRET" =~ ^[0-9a-f]{64}$ ]] || { echo 'Existing worker secret is invalid.' >&2; exit 1; }
+  run_site cp -a "$REPO/overlay/." "$APP/"
+  run_site cp -a "$REPO/worker/." "$APP/worker/"
+fi
 run_site "$PHP_BIN" "$APP/artisan" migrate --force
 run_site "$PHP_BIN" "$APP/artisan" optimize
 run_site "$PHP_BIN" "$APP/artisan" route:list --path=login >/dev/null
